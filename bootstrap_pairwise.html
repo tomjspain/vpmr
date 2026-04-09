@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bootstrap vs Jackknife — Pairwise Discrimination</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2333;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #e8eaf0;
+    --text2: #8a8fa8;
+    --text3: #555a72;
+    --blue: #4a90d9;
+    --blue-dim: rgba(74,144,217,0.15);
+    --red: #e05a5a;
+    --red-dim: rgba(224,90,90,0.15);
+    --green: #4ab89a;
+    --green-dim: rgba(74,184,154,0.12);
+    --amber: #d4943a;
+    --amber-dim: rgba(212,148,58,0.15);
+    --purple: #8b7dd4;
+    --purple-dim: rgba(139,125,212,0.15);
+    --teal: #3ab8c4;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 48px 24px 80px;
+  }
+
+  header {
+    max-width: 900px;
+    margin: 0 auto 56px;
+    border-left: 3px solid var(--blue);
+    padding-left: 20px;
+  }
+
+  header .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--blue);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  header h1 {
+    font-size: clamp(22px, 4vw, 34px);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  header p {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.6;
+    max-width: 640px;
+  }
+
+  .section {
+    max-width: 900px;
+    margin: 0 auto 64px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .section-desc {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 24px;
+    line-height: 1.6;
+    max-width: 680px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px;
+  }
+
+  /* ---- SCATTER ---- */
+  #scatter-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 600px) {
+    #scatter-wrap { grid-template-columns: 1fr; }
+  }
+
+  .scatter-panel { position: relative; }
+
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--text2);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface2);
+  }
+
+  .scatter-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .leg-item { display: flex; align-items: center; gap: 6px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .leg-ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--red); flex-shrink: 0; }
+  .leg-stack { width: 10px; height: 10px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+
+  /* ---- MATRIX ---- */
+  .matrix-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+
+  @media (max-width: 640px) {
+    .matrix-layout { grid-template-columns: 1fr; }
+  }
+
+  .matrix-panel-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--text2);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+    min-height: 28px;
+  }
+
+  .pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text2);
+  }
+
+  .pill.dup {
+    border-color: var(--red);
+    background: var(--red-dim);
+    color: #f09090;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  th {
+    padding: 6px 4px;
+    text-align: center;
+    color: var(--text3);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+  }
+
+  td {
+    padding: 5px 4px;
+    text-align: center;
+    border: 1px solid var(--border);
+    font-size: 10px;
+  }
+
+  td.self   { color: var(--text3); background: transparent; }
+  td.conc   { background: rgba(74,184,154,0.12); color: #4ab89a; }
+  td.disc   { background: rgba(224,90,90,0.12);  color: #e05a5a; }
+  td.tx     { background: rgba(74,144,217,0.12); color: #4a90d9; }
+  td.ty     { background: rgba(212,148,58,0.12); color: #d4943a; }
+  td.txy    { background: rgba(139,125,212,0.12);color: #8b7dd4; }
+  td.spur   { background: rgba(139,125,212,0.2); color: #a89ee8; outline: 2px solid var(--red); outline-offset: -2px; }
+
+  .matrix-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+    font-size: 11px;
+    font-family: var(--mono);
+  }
+
+  .mleg { display: flex; align-items: center; gap: 5px; color: var(--text2); }
+  .mleg-box { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ---- CONTROLS ---- */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .btn:hover { border-color: var(--blue); background: var(--blue-dim); }
+
+  .summary {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .summary span { color: var(--red); }
+
+  .callout {
+    background: var(--blue-dim);
+    border: 1px solid rgba(74,144,217,0.25);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 20px;
+    line-height: 1.6;
+  }
+
+  .callout strong { color: var(--text); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Recurrent event discrimination · Bootstrap vs Jackknife</div>
+  <h1>Why bootstrap resampling introduces spurious t<sub>xy</sub> pairs</h1>
+  <p>Pairwise concordance statistics (Kendall's τ, Somers' D, C-statistic) are estimated over all pairs of individuals. Bootstrap resampling with replacement produces duplicate individuals — pairs involving copies of the same individual are forced into artificial ties on both observed and predicted counts.</p>
+</header>
+
+<!-- SECTION 1: SCATTER -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <span class="section-title">Scatter view — stacked duplicates in the (obs, pred) space</span>
+  </div>
+  <p class="section-desc">Left: original sample. Right: one bootstrap resample. Individuals drawn more than once appear stacked at the same (obs, pred) coordinate. Any pair involving both copies is a guaranteed t<sub>xy</sub>.</p>
+
+  <div class="card">
+    <div id="scatter-wrap">
+      <div class="scatter-panel">
+        <div class="panel-title">Original sample &mdash; n = 30</div>
+        <canvas id="c-orig" width="380" height="300"></canvas>
+      </div>
+      <div class="scatter-panel">
+        <div class="panel-title">Bootstrap resample &mdash; n = 30</div>
+        <canvas id="c-boot" width="380" height="300"></canvas>
+      </div>
+    </div>
+
+    <div class="scatter-legend">
+      <div class="leg-item"><div class="leg-dot" style="background:var(--blue);opacity:0.8"></div> Original individual</div>
+      <div class="leg-item"><div class="leg-ring"></div> Duplicated (red ring on original)</div>
+      <div class="leg-item"><div class="leg-stack"></div> Stacked duplicate → forced t<sub>xy</sub></div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="scatter-btn">↺ New resample</button>
+      <div class="summary" id="scatter-summary"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 2: MATRIX -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <span class="section-title">Pairwise matrix view — cell-level contamination</span>
+  </div>
+  <p class="section-desc">A small n=5 example. Each cell shows the classification of the pair (row individual, column individual). When a bootstrap resample includes a duplicate, the cells comparing an original to its copy are forced to t<sub>xy</sub> (highlighted in red outline) — regardless of whether the pair would otherwise be concordant.</p>
+
+  <div class="card">
+    <div class="matrix-layout">
+      <div>
+        <div class="matrix-panel-title">Original sample</div>
+        <div class="pills" id="orig-pills"></div>
+        <table id="orig-table"></table>
+      </div>
+      <div>
+        <div class="matrix-panel-title">Bootstrap resample</div>
+        <div class="pills" id="boot-pills"></div>
+        <table id="boot-table"></table>
+      </div>
+    </div>
+
+    <div class="matrix-legend">
+      <div class="mleg"><div class="mleg-box" style="background:rgba(74,184,154,0.2);border:1px solid #4ab89a"></div>con</div>
+      <div class="mleg"><div class="mleg-box" style="background:rgba(224,90,90,0.2);border:1px solid #e05a5a"></div>dis</div>
+      <div class="mleg"><div class="mleg-box" style="background:rgba(74,144,217,0.2);border:1px solid #4a90d9"></div>t_x</div>
+      <div class="mleg"><div class="mleg-box" style="background:rgba(212,148,58,0.2);border:1px solid #d4943a"></div>t_y</div>
+      <div class="mleg"><div class="mleg-box" style="background:rgba(139,125,212,0.2);border:1px solid #8b7dd4"></div>t_xy</div>
+      <div class="mleg"><div class="mleg-box" style="background:rgba(139,125,212,0.3);outline:2px solid #e05a5a;outline-offset:-1px"></div>spurious t_xy</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="matrix-btn">↺ New resample</button>
+      <div class="summary" id="matrix-summary"></div>
+    </div>
+
+    <div class="callout">
+      <strong>Jackknife avoids this entirely.</strong> The grouped jackknife drops d individuals from the <em>original</em> sample in each replicate — no individual is ever duplicated, so the pairwise space contains only genuine pairs. This preserves the integrity of con, dis, t_x, t_y, and t_xy classifications.
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== SCATTER ===================== */
+const origData30 = (function() {
+  let s = 314159;
+  function r() { s ^= s<<13; s ^= s>>17; s ^= s<<5; return (s>>>0)/4294967296; }
+  return Array.from({length:30}, (_,i) => ({ id:i, ox:0.05+r()*0.9, oy:0.05+r()*0.9 }));
+})();
+
+let scatterSeed = 271828;
+function scatterRng() { scatterSeed ^= scatterSeed<<13; scatterSeed ^= scatterSeed>>17; scatterSeed ^= scatterSeed<<5; return (scatterSeed>>>0)/4294967296; }
+
+function drawScatter() {
+  const n = origData30.length;
+  const indices = Array.from({length:n}, () => Math.floor(scatterRng()*n));
+  const counts = new Array(n).fill(0);
+  indices.forEach(i => counts[i]++);
+  const dupOrigIds = new Set(counts.map((c,i)=>c>1?i:-1).filter(i=>i>=0));
+
+  const pad = 30;
+  function paintCanvas(canvasId, pts, isOriginal) {
+    const cv = document.getElementById(canvasId);
+    const ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    [0.25,0.5,0.75].forEach(t => {
+      const gx = pad + t*(W-2*pad), gy = H-pad - t*(H-2*pad);
+      ctx.beginPath(); ctx.moveTo(gx,pad); ctx.lineTo(gx,H-pad); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pad,gy); ctx.lineTo(W-pad,gy); ctx.stroke();
+    });
+
+    // Axes
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad,pad); ctx.lineTo(pad,H-pad); ctx.lineTo(W-pad,H-pad); ctx.stroke();
+
+    // Axis labels
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '10px IBM Plex Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('predicted', W/2, H-6);
+    ctx.save(); ctx.translate(10, H/2); ctx.rotate(-Math.PI/2);
+    ctx.fillText('observed', 0, 0); ctx.restore();
+
+    pts.forEach(pt => {
+      const x = pad + pt.ox*(W-2*pad);
+      const y = H-pad - pt.oy*(H-2*pad);
+      const isDup = !isOriginal && pt.isStack;
+      const wasChosen = !isOriginal ? false : dupOrigIds.has(pt.id);
+
+      if (!isOriginal && pt.isStack) {
+        ctx.beginPath(); ctx.arc(x,y,10,0,Math.PI*2);
+        ctx.fillStyle = 'rgba(224,90,90,0.15)'; ctx.fill();
+      }
+
+      ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2);
+      ctx.fillStyle = isDup ? '#e05a5a' : 'rgba(74,144,217,0.8)';
+      ctx.fill();
+
+      if (wasChosen) {
+        ctx.beginPath(); ctx.arc(x,y,9,0,Math.PI*2);
+        ctx.strokeStyle = '#e05a5a'; ctx.lineWidth = 1.5; ctx.stroke();
+      }
+    });
+  }
+
+  paintCanvas('c-orig', origData30, true);
+
+  // Build boot points with tiny jitter for stacked
+  const stackCount = {};
+  const bootPts = indices.map(oi => {
+    const sc = stackCount[oi]||0; stackCount[oi]=sc+1;
+    return { id:oi, ox: origData30[oi].ox + sc*0.025, oy: origData30[oi].oy + sc*0.025, isStack: sc>0 };
+  });
+  paintCanvas('c-boot', bootPts, false);
+
+  let spurious = 0;
+  for (let i=0;i<n;i++) for(let j=i+1;j<n;j++) if(indices[i]===indices[j]) spurious++;
+  const nd = dupOrigIds.size;
+  const s = document.getElementById('scatter-summary');
+  s.innerHTML = nd > 0
+    ? `<span>${nd}</span> individual${nd!==1?'s':''} duplicated &rarr; <span>${spurious}</span> spurious t<sub>xy</sub> pair${spurious!==1?'s':''}`
+    : 'No duplicates this draw — try again';
+}
+
+document.getElementById('scatter-btn').addEventListener('click', drawScatter);
+drawScatter();
+
+/* ===================== MATRIX ===================== */
+const orig5 = [
+  {label:'A', obs:1, pred:2},
+  {label:'B', obs:3, pred:1},
+  {label:'C', obs:3, pred:4},
+  {label:'D', obs:5, pred:5},
+  {label:'E', obs:2, pred:3},
+];
+
+let matSeed = 55555;
+function matRng() { matSeed ^= matSeed<<13; matSeed ^= matSeed>>17; matSeed ^= matSeed<<5; return (matSeed>>>0)/4294967296; }
+
+function classify(a,b) {
+  const do_=a.obs-b.obs, dp=a.pred-b.pred;
+  if(do_===0&&dp===0) return 'txy';
+  if(do_===0) return 'tx';
+  if(dp===0) return 'ty';
+  return Math.sign(do_)===Math.sign(dp)?'conc':'disc';
+}
+const labelMap = {conc:'con',disc:'dis',tx:'t_x',ty:'t_y',txy:'t_xy'};
+
+function buildPills(id, inds) {
+  const el = document.getElementById(id); el.innerHTML='';
+  inds.forEach(ind => {
+    const d = document.createElement('div');
+    d.className = 'pill' + (ind.dupOf?' dup':'');
+    d.textContent = `${ind.label}(${ind.obs},${ind.pred})`;
+    el.appendChild(d);
+  });
+}
+
+function buildMatrix(tableId, inds, spurSet) {
+  const tbl = document.getElementById(tableId); tbl.innerHTML='';
+  const hr = document.createElement('tr');
+  const th0 = document.createElement('th'); th0.textContent=''; hr.appendChild(th0);
+  inds.forEach(ind => { const th=document.createElement('th'); th.textContent=ind.label; hr.appendChild(th); });
+  tbl.appendChild(hr);
+  inds.forEach((a,i) => {
+    const tr = document.createElement('tr');
+    const rh = document.createElement('th'); rh.textContent=a.label; tr.appendChild(rh);
+    inds.forEach((b,j) => {
+      const td = document.createElement('td');
+      if(i===j) { td.className='self'; td.textContent='—'; }
+      else {
+        const cls = classify(a,b);
+        const spur = spurSet && spurSet.has(`${i},${j}`);
+        td.className = spur ? 'spur' : cls;
+        td.textContent = labelMap[cls];
+      }
+      tr.appendChild(td);
+    });
+    tbl.appendChild(tr);
+  });
+}
+
+function renderMatrix() {
+  const indices = Array.from({length:5}, ()=>Math.floor(matRng()*5));
+  const counts = new Array(5).fill(0);
+  indices.forEach(i=>counts[i]++);
+
+  buildMatrix('orig-table', orig5, null);
+  buildPills('orig-pills', orig5);
+
+  const seen={};
+  const bootInds = indices.map(oi => {
+    const base=orig5[oi]; seen[oi]=(seen[oi]||0)+1;
+    const primes = "'".repeat(seen[oi]-1);
+    return {label:base.label+primes, obs:base.obs, pred:base.pred, dupOf:seen[oi]>1?base.label:null, origIdx:oi};
+  });
+
+  const spurSet = new Set();
+  for(let i=0;i<5;i++) for(let j=0;j<5;j++) if(i!==j&&bootInds[i].origIdx===bootInds[j].origIdx) spurSet.add(`${i},${j}`);
+
+  buildMatrix('boot-table', bootInds, spurSet);
+  buildPills('boot-pills', bootInds);
+
+  const ns = spurSet.size/2;
+  const el = document.getElementById('matrix-summary');
+  el.innerHTML = ns > 0
+    ? `<span>${ns}</span> spurious t<sub>xy</sub> pair${ns!==1?'s':''} introduced`
+    : 'No duplicates this draw — try again';
+}
+
+document.getElementById('matrix-btn').addEventListener('click', renderMatrix);
+renderMatrix();
+</script>
+</body>
+</html>
