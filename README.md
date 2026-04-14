@@ -11,7 +11,7 @@
 
 ```r
 library(Rcpp)
-sourceCpp("vpmr_cpp_v2.0.cpp")
+sourceCpp("vpmr_cpp_v2.1.cpp")
 
 # Load example dataset
 con <- url("https://raw.githubusercontent.com/tomjspain/vpmr/main/example%20df.rds", "rb")
